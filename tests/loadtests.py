@@ -1,5 +1,4 @@
 import base64
-import time
 import uuid
 
 import aiohttp
