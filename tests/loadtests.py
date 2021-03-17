@@ -1,5 +1,7 @@
 import base64
+import os
 import uuid
+from urllib.parse import urlparse, urljoin
 
 import aiohttp
 import asyncio
@@ -31,9 +33,15 @@ async def test_basic(session):
         assert hello_msg["messageType"] == "hello"
         await ws.send_json(dict(messageType="register", channelID=channel_id))
         msg1 = await ws.receive_json()
+        # switch to rust endpoint
+        if os.getenv("AUTOPUSH_RUST_SERVER") and (os.getenv("AUTOPUSH_ENV") != "dev"):
+            path = urlparse(msg1["pushEndpoint"]).path
+            endpoint_url = urljoin(URLS["rs_server_url"], path)
+        else:
+            endpoint_url = msg1["pushEndpoint"]
         # Send a notification
         async with session.post(
-            msg1["pushEndpoint"],
+            endpoint_url,
             headers=headers,
             data=base64.urlsafe_b64decode(encrypted_data),
             ssl=False,
@@ -74,23 +82,28 @@ async def test_basic_topic(session):
         await ws.send_json(dict(messageType="register", channelID=channel_id))
         msg1 = await ws.receive_json()
         await ws.close()
-
+    # switch to rust endpoint
+    if os.getenv("AUTOPUSH_RUST_SERVER"):
+        path = urlparse(msg1["pushEndpoint"]).path
+        endpoint_url = urljoin(URLS["rs_server_url"], path)
+    else:
+        endpoint_url = msg1["pushEndpoint"]
     # Send Notification
     async with session.post(
-        msg1["pushEndpoint"],
+        endpoint_url,
         headers=headers,
         data=base64.urlsafe_b64decode(encrypted_data[0]),
         ssl=False,
     ) as conn:
-        assert conn.status == 201
+        assert conn.status == 201 or 202
     # Send a second Notification with different data
     async with session.post(
-        msg1["pushEndpoint"],
+        endpoint_url,
         headers=headers,
         data=base64.urlsafe_b64decode(encrypted_data[1]),
         ssl=False,
     ) as conn:
-        assert conn.status == 201
+        assert conn.status == 201 or 202
     # Connect and check notifications
     async with session.ws_connect(
         f'{URLS["push_server"]}:443',
