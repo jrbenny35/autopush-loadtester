@@ -150,7 +150,7 @@ async def test_connect_and_hold(session):
 
 @scenario(weight=80)
 async def test_connect_direct_store(session):
-    """Basic test
+    """Check stored notification
     
     Connect to websocket
     Register
@@ -220,7 +220,7 @@ async def test_connect_direct_store(session):
 
 @scenario(weight=80)
 async def test_connect_stored(session):
-    """Basic test
+    """Check amount of sent notifications match received
     
     Connect to websocket
     Register
